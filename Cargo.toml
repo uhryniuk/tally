@@ -1,0 +1,26 @@
+[package]
+name = "tally"
+version = "0.1.0"
+authors = ["Dylan Uhryniuk <duhry99@gmail.com>"]
+license = "MIT"
+description = ""
+repository = "https://github.com/uhryniuk/tally"
+documentation = "https://docs.rs/tally"
+keywords = ["cli"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+edition = "2021"
+
+[[bin]]
+name = "tally"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.40.0", features = ["rt-multi-thread", "io-util", "macros", "net", "time"] }
+clap = { version = "4.5.18", features = ["derive", "env"] }
+anyhow = { version = "1.0.89", features = ["backtrace"] }
+tokio-util = { version = "0.7.12", features = ["codec"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+sqlite = "0.36.1"
+
