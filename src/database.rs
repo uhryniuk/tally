@@ -1,5 +1,5 @@
-use anyhow::Result;
-use sqlite::ConnectionThreadSafe;
+use anyhow::{anyhow, Result};
+use sqlite::{ConnectionThreadSafe, Value};
 
 pub struct Database {
     pub conn: ConnectionThreadSafe,
@@ -32,9 +32,7 @@ impl Database {
         // create default counter
         let mut stmt = self.conn.prepare("SELECT COUNT(*) FROM counters;")?;
         if let Some(row) = stmt.iter().next() {
-            println!("{:?}", row);
             if let sqlite::Value::Integer(count) = &row?[0] {
-                println!("{:?}", count);
                 if *count == 0 {
                     self.create_counter("tally", 0, 0, "{}", true)?;
                 }
@@ -83,5 +81,110 @@ impl Database {
 
         eprintln!("Error getting default counter");
         std::process::exit(1);
+    }
+
+    pub fn get_count(&self, name: &str) -> Result<i64> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT count FROM counters WHERE name = ?")?;
+
+        stmt.bind((1, name))?;
+
+        // return count if exists
+        if let Some(row) = stmt.iter().next() {
+            if let sqlite::Value::Integer(count) = &row?[0] {
+                return Ok(count.clone());
+            }
+        }
+
+        // release write lock
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
+        // if no count found, implcitly create a counter
+        let mut stmt = self.conn.prepare(
+            "INSERT INTO counters (name, count, step, template, is_default) 
+            VALUES (?, ?, ?, ?, ?)",
+        )?;
+        stmt.bind((1, name))?;
+        stmt.bind((2, 0))?;
+        stmt.bind((3, 0))?;
+        stmt.bind((4, "{}"))?;
+        stmt.bind((5, false as i64))?;
+        stmt.next()?;
+
+        // release write lock
+        self.conn.execute("COMMIT;")?;
+
+        Ok(0)
+    }
+
+    pub fn increment_and_get_count(&self, name: &str, amount: i64) -> Result<i64> {
+        // Start a transaction to lock the table
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
+        //
+        let mut update_stmt = self
+            .conn
+            .prepare("UPDATE counters SET count = count + ? WHERE name = ?;")?;
+
+        // Bind and execute the update
+        update_stmt.bind((1, amount))?;
+        update_stmt.bind((2, name))?;
+        update_stmt.next()?;
+
+        // get the updates row
+        let mut query_stmt = self
+            .conn
+            .prepare("SELECT count FROM counters WHERE name = ?;")?;
+        query_stmt.bind((1, name))?;
+
+        let row = query_stmt.iter().next().unwrap();
+        let count: i64 = match &row?[0] {
+            Value::Integer(count) => count.clone(),
+            _ => {
+                eprintln!("couldn't get updated count");
+                std::process::exit(1);
+            }
+        };
+
+        // Commit the transaction
+        self.conn.execute("COMMIT;")?;
+
+        Ok(count)
+    }
+
+    // TODO combine inc and dec into 'update_and_get_count', pass var for which op
+    pub fn decrement_and_get_count(&self, name: &str, amount: i64) -> Result<i64> {
+        // Start a transaction to lock the table
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
+        let mut update_stmt = self
+            .conn
+            .prepare("UPDATE counters SET count = count - ? WHERE name = ?;")?;
+
+        // Bind and execute the update
+        update_stmt.bind((1, amount))?;
+        update_stmt.bind((2, name))?;
+        update_stmt.next()?;
+
+        // get the updates row
+        let mut query_stmt = self
+            .conn
+            .prepare("SELECT count FROM counters WHERE name = ?;")?;
+        query_stmt.bind((1, name))?;
+
+        let row = query_stmt.iter().next().unwrap();
+        let count: i64 = match &row?[0] {
+            Value::Integer(count) => count.clone(),
+            _ => {
+                eprintln!("couldn't get updated count");
+                std::process::exit(1);
+            }
+        };
+
+        // Commit the transaction
+        self.conn.execute("COMMIT;")?;
+
+        Ok(count)
     }
 }

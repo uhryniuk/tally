@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
     // Check if database file exists, if not create, seed database
     // Get database connection
     // Pass connection and context variables to fn that handle each subcommand
-    let db = database::Database::new("database.db");
+    let db = database::Database::new("database.db").expect("Couldn't connect to database");
 
     // Check if a specific table was supplied.
     // Otherwise get the default table from the database.
@@ -138,17 +138,19 @@ async fn main() -> Result<()> {
 
     let is_raw = matches.get_flag("raw");
 
-    println!("{:?}", is_raw);
-
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
             println!("Running set {:?}", sub_mat);
         }
         Some(("inc", sub_mat)) => {
-            println!("Running inc {:?}", sub_mat);
+            let amount = 1; // TODO remove hardcoded amount to increment by.
+            let count = db.increment_and_get_count(&name, amount)?;
+            println!("{}", count);
         }
         Some(("dec", sub_mat)) => {
-            println!("Running dec {:?}", sub_mat);
+            let amount = 1; // TODO remove hardcoded amount to increment by.
+            let count = db.decrement_and_get_count(&name, amount)?;
+            println!("{}", count);
         }
         Some(("delete", sub_mat)) => {
             println!("Running delete {:?}", sub_mat);
@@ -157,7 +159,15 @@ async fn main() -> Result<()> {
             println!("Running list {:?}", sub_mat);
         }
         None => {
-            println!("No subcommand provided");
+            let count = db.get_count(&name)?;
+
+            match is_raw {
+                true => println!("{}", count),
+                false => println!("{}", count), // TODO add render template call
+            }
+            // attempt to get count
+            // if no row returns, create a row and return 0
+            // print out the value to stdout.
         }
         _ => {
             eprintln!("Weird context error");
