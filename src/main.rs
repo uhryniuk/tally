@@ -1,41 +1,7 @@
 mod database;
 
 use anyhow::Result;
-use clap::{error::ErrorKind, Arg, Command, CommandFactory, Parser, Subcommand};
-use sqlite::Connection;
-
-#[tokio::main]
-async fn run(command: Command) -> Result<()> {
-    //match command {
-    //    Command::Set {
-    //        local_host,
-    //        local_port,
-    //        to,
-    //        port,
-    //        secret,
-    //    } => {
-    //        //let client = Client::new(&local_host, local_port, &to, port, secret.as_deref()).await?;
-    //        //client.listen().await?;
-    //    }
-    //    Command::Server {
-    //        min_port,
-    //        max_port,
-    //        secret,
-    //    } => {
-    //        let port_range = min_port..=max_port;
-    //        if port_range.is_empty() {
-    //            Args::command()
-    //                .error(ErrorKind::InvalidValue, "port range is empty")
-    //                .exit();
-    //        }
-    //        Server::new(port_range, secret.as_deref()).listen().await?;
-    //    }
-    //}
-    //
-    println!("Writing from run");
-
-    Ok(())
-}
+use clap::{Arg, Command};
 
 #[tokio::main]
 async fn main() -> Result<()> {

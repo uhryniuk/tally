@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use sqlite::{ConnectionThreadSafe, Value};
 
 #[derive(Debug)]
@@ -93,6 +93,9 @@ impl Database {
     }
 
     pub fn get_count(&self, name: &str) -> Result<i64> {
+        // get write lock
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
         let mut stmt = self
             .conn
             .prepare("SELECT count FROM counters WHERE name = ?")?;
@@ -102,12 +105,10 @@ impl Database {
         // return count if exists
         if let Some(row) = stmt.iter().next() {
             if let sqlite::Value::Integer(count) = &row?[0] {
+                self.conn.execute("COMMIT;")?;
                 return Ok(count.clone());
             }
         }
-
-        // release write lock
-        self.conn.execute("BEGIN TRANSACTION;")?;
 
         // if no count found, implcitly create a counter
         let mut stmt = self.conn.prepare(
@@ -127,14 +128,24 @@ impl Database {
         Ok(0)
     }
 
-    pub fn increment_and_get_count(&self, name: &str, amount: i64) -> Result<i64> {
+    fn update_and_get_count(&self, name: &str, amount: i64, op: char) -> Result<i64> {
         // Start a transaction to lock the table
         self.conn.execute("BEGIN TRANSACTION;")?;
 
-        //
-        let mut update_stmt = self
-            .conn
-            .prepare("UPDATE counters SET count = count + ? WHERE name = ?;")?;
+        let mut update_stmt = match op {
+            '+' => {
+                self.conn
+                    .prepare("UPDATE counters SET count = count + ? WHERE name = ?;")?;
+            }
+            '-' => {
+                self.conn
+                    .prepare("UPDATE counters SET count = count - ? WHERE name = ?;")?;
+            }
+            _ => {
+                eprintln!("Couldn't update count");
+                std::process::exit(1);
+            }
+        };
 
         // Bind and execute the update
         update_stmt.bind((1, amount))?;
@@ -162,39 +173,12 @@ impl Database {
         Ok(count)
     }
 
-    // TODO combine inc and dec into 'update_and_get_count', pass var for which op
+    pub fn increment_and_get_count(&self, name: &str, amount: i64) -> Result<i64> {
+        self.update_and_get_count(name, amount, '+')
+    }
+
     pub fn decrement_and_get_count(&self, name: &str, amount: i64) -> Result<i64> {
-        // Start a transaction to lock the table
-        self.conn.execute("BEGIN TRANSACTION;")?;
-
-        let mut update_stmt = self
-            .conn
-            .prepare("UPDATE counters SET count = count - ? WHERE name = ?;")?;
-
-        // Bind and execute the update
-        update_stmt.bind((1, amount))?;
-        update_stmt.bind((2, name))?;
-        update_stmt.next()?;
-
-        // get the updates row
-        let mut query_stmt = self
-            .conn
-            .prepare("SELECT count FROM counters WHERE name = ?;")?;
-        query_stmt.bind((1, name))?;
-
-        let row = query_stmt.iter().next().unwrap();
-        let count: i64 = match &row?[0] {
-            Value::Integer(count) => count.clone(),
-            _ => {
-                eprintln!("couldn't get updated count");
-                std::process::exit(1);
-            }
-        };
-
-        // Commit the transaction
-        self.conn.execute("COMMIT;")?;
-
-        Ok(count)
+        self.update_and_get_count(name, amount, '-')
     }
 
     /// Delete a counter using the provided name
