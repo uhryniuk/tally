@@ -1,6 +1,15 @@
 use anyhow::{anyhow, Result};
 use sqlite::{ConnectionThreadSafe, Value};
 
+#[derive(Debug)]
+pub struct Counter {
+    name: String,
+    count: i64,
+    step: i64,
+    template: String,
+    is_default: bool,
+}
+
 pub struct Database {
     pub conn: ConnectionThreadSafe,
 }
@@ -186,5 +195,56 @@ impl Database {
         self.conn.execute("COMMIT;")?;
 
         Ok(count)
+    }
+
+    /// Delete a counter using the provided name
+    pub fn delete_counter(&self, name: &str) -> Result<()> {
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
+        let prior = self.get_all_counters()?.len();
+
+        // delete the counter
+        let mut stmt = self.conn.prepare("DELETE FROM counters WHERE name = ?;")?;
+        stmt.bind((1, name))?;
+        stmt.next()?;
+
+        let post = self.get_all_counters()?.len();
+
+        self.conn.execute("COMMIT;")?;
+
+        // TODO shouldn't be able to delete default counter
+        if post < prior {
+            eprintln!("Counter '{}' has been deleted.", name);
+        } else {
+            eprintln!("Counter '{}' does not exist.", name);
+        }
+
+        Ok(())
+    }
+
+    /// Get all the counters that exist
+    pub fn get_all_counters(&self) -> Result<Vec<Counter>> {
+        let mut stmt = self.conn.prepare("SELECT * FROM counters")?;
+        let mut rows: Vec<Counter> = Vec::new();
+
+        // Iterate over the rows in the query result
+        while let Ok(sqlite::State::Row) = stmt.next() {
+            // extract values from row in stmt
+            let name = stmt.read::<String, usize>(0)?;
+            let count = stmt.read::<i64, usize>(1)?;
+            let step = stmt.read::<i64, usize>(2)?;
+            let template = stmt.read::<String, usize>(3)?;
+            let is_default = stmt.read::<i64, usize>(4)?;
+
+            rows.push(Counter {
+                name,
+                count,
+                step,
+                template,
+                is_default: is_default != 0,
+            })
+        }
+
+        Ok(rows)
     }
 }

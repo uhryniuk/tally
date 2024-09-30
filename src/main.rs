@@ -73,6 +73,8 @@ async fn main() -> Result<()> {
                         .help("Default increment amount for given counter"),
                 )
                 .arg(
+                    // TODO are the inc and dec not the same step value?
+                    // Consider this further...
                     Arg::new("dec")
                         .required(false)
                         .long("dec")
@@ -110,7 +112,7 @@ async fn main() -> Result<()> {
             ),
         )
         .subcommand(
-            Command::new("delete").about("Dlete a given counter").arg(
+            Command::new("delete").about("Delete a given counter").arg(
                 Arg::new("counter")
                     .required(false)
                     .index(1)
@@ -121,30 +123,30 @@ async fn main() -> Result<()> {
 
     let matches = app.get_matches();
 
+    // NOTE List of future features (not MVP)
     // Parse config file (contains database location, default counter name) - Future
     // Check if data dir exists, if not create
     // Check if database file exists, if not create, seed database
-    // Get database connection
-    // Pass connection and context variables to fn that handle each subcommand
+
     let db = database::Database::new("database.db").expect("Couldn't connect to database");
 
-    // Check if a specific table was supplied.
-    // Otherwise get the default table from the database.
-
+    // parse top level args
+    let default_name = db.get_default_counter()?;
     let name = matches
         .get_one::<String>("name")
         .cloned()
-        .unwrap_or_else(|| String::from("tally"));
+        .unwrap_or_else(|| default_name.clone());
 
     let is_raw = matches.get_flag("raw");
 
+    // divert logic to subcommand
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
             println!("Running set {:?}", sub_mat);
         }
         Some(("inc", sub_mat)) => {
-            let amount = 1; // TODO remove hardcoded amount to increment by.
-            let count = db.increment_and_get_count(&name, amount)?;
+            let step = 1; // TODO remove hardcoded amount to increment by.
+            let count = db.increment_and_get_count(&name, step)?;
             println!("{}", count);
         }
         Some(("dec", sub_mat)) => {
@@ -152,22 +154,23 @@ async fn main() -> Result<()> {
             let count = db.decrement_and_get_count(&name, amount)?;
             println!("{}", count);
         }
-        Some(("delete", sub_mat)) => {
-            println!("Running delete {:?}", sub_mat);
-        }
-        Some(("list", sub_mat)) => {
-            println!("Running list {:?}", sub_mat);
+        Some(("delete", _sub_mat)) => db.delete_counter(&name)?,
+        Some(("list", _sub_mat)) => {
+            // TODO add better table printing
+            let rows = db.get_all_counters()?;
+            for row in rows.iter() {
+                println!("{:?}", row)
+            }
         }
         None => {
             let count = db.get_count(&name)?;
 
-            match is_raw {
-                true => println!("{}", count),
-                false => println!("{}", count), // TODO add render template call
+            if is_raw {
+                println!("{}", count);
+            } else {
+                // TODO add render template call
+                println!("{}", count)
             }
-            // attempt to get count
-            // if no row returns, create a row and return 0
-            // print out the value to stdout.
         }
         _ => {
             eprintln!("Weird context error");
