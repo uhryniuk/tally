@@ -49,3 +49,4 @@ cmake-build-*/
 
 # macOS
 
+database.db

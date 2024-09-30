@@ -1,6 +1,8 @@
+mod database;
+
 use anyhow::Result;
-//use bore_cli::{client::Client, server::Server};
 use clap::{error::ErrorKind, Arg, Command, CommandFactory, Parser, Subcommand};
+use sqlite::Connection;
 
 #[tokio::main]
 async fn run(command: Command) -> Result<()> {
@@ -36,42 +38,9 @@ async fn run(command: Command) -> Result<()> {
 }
 
 #[tokio::main]
-async fn runner(command: Command) -> Result<()> {
-    //match command {
-    //    Command::Set {
-    //        local_host,
-    //        local_port,
-    //        to,
-    //        port,
-    //        secret,
-    //    } => {
-    //        //let client = Client::new(&local_host, local_port, &to, port, secret.as_deref()).await?;
-    //        //client.listen().await?;
-    //    }
-    //    Command::Server {
-    //        min_port,
-    //        max_port,
-    //        secret,
-    //    } => {
-    //        let port_range = min_port..=max_port;
-    //        if port_range.is_empty() {
-    //            Args::command()
-    //                .error(ErrorKind::InvalidValue, "port range is empty")
-    //                .exit();
-    //        }
-    //        //Server::new(port_range, secret.as_deref()).listen().await?;
-    //    }
-    //}
-
-    println!("Writing from RUNNER");
-
-    Ok(())
-}
-
-fn main() -> Result<()> {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-    //let _ = run(Args::parse().command);
-    //runner(Args::parse().command)
+
     let app = Command::new("tally")
         .about("A global counter")
         .arg(
@@ -84,6 +53,7 @@ fn main() -> Result<()> {
             Arg::new("raw")
                 .required(false)
                 .long("raw")
+                .action(clap::ArgAction::SetTrue)
                 .help("Render counter without template (if template is set)"),
         )
         .subcommand(
@@ -150,6 +120,25 @@ fn main() -> Result<()> {
         .subcommand(Command::new("list").about("List all of the active counters"));
 
     let matches = app.get_matches();
+
+    // Parse config file (contains database location, default counter name) - Future
+    // Check if data dir exists, if not create
+    // Check if database file exists, if not create, seed database
+    // Get database connection
+    // Pass connection and context variables to fn that handle each subcommand
+    let db = database::Database::new("database.db");
+
+    // Check if a specific table was supplied.
+    // Otherwise get the default table from the database.
+
+    let name = matches
+        .get_one::<String>("name")
+        .cloned()
+        .unwrap_or_else(|| String::from("tally"));
+
+    let is_raw = matches.get_flag("raw");
+
+    println!("{:?}", is_raw);
 
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
