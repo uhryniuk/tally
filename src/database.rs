@@ -243,4 +243,81 @@ impl Database {
 
         Err(anyhow::anyhow!("Unable to get 'step' value for '{}'", name))
     }
+
+    pub fn set_count(&self, name: &str, count: i64) -> Result<()> {
+        // Start a transaction to lock the table
+        self.conn.execute("BEGIN TRANSACTION;")?;
+        let mut stmt = self
+            .conn
+            .prepare("UPDATE counters SET count = ? WHERE name = ?;")?;
+
+        // Bind and execute the update
+        stmt.bind((1, count))?;
+        stmt.bind((2, name))?;
+        stmt.next()?;
+
+        // Commit the transaction
+        self.conn.execute("COMMIT;")?;
+
+        Ok(())
+    }
+
+    pub fn set_step(&self, name: &str, step: i64) -> Result<()> {
+        // Start a transaction to lock the table
+        self.conn.execute("BEGIN TRANSACTION;")?;
+        let mut stmt = self
+            .conn
+            .prepare("UPDATE counters SET step = ? WHERE name = ?;")?;
+
+        // Bind and execute the update
+        stmt.bind((1, step))?;
+        stmt.bind((2, name))?;
+        stmt.next()?;
+
+        // Commit the transaction
+        self.conn.execute("COMMIT;")?;
+
+        Ok(())
+    }
+
+    pub fn set_template(&self, name: &str, template: &str) -> Result<()> {
+        // Start a transaction to lock the table
+        self.conn.execute("BEGIN TRANSACTION;")?;
+        let mut stmt = self
+            .conn
+            .prepare("UPDATE counters SET template = ? WHERE name = ?;")?;
+
+        // Bind and execute the update
+        stmt.bind((1, template))?;
+        stmt.bind((2, name))?;
+        stmt.next()?;
+
+        // Commit the transaction
+        self.conn.execute("COMMIT;")?;
+
+        Ok(())
+    }
+
+    pub fn set_default(&self, name: &str, default: bool) -> Result<()> {
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
+        // set all is_default to false
+        let mut stmt = self.conn.prepare("UPDATE counters SET is_default = ?;")?;
+        stmt.bind((1, false as i64))?;
+        stmt.next()?;
+
+        // set given to true
+        let mut stmt = self
+            .conn
+            .prepare("UPDATE counters SET is_default = ? WHERE name = ?;")?;
+
+        stmt.bind((1, default as i64))?;
+        stmt.bind((2, name))?;
+        stmt.next()?;
+
+        // Commit the transaction
+        self.conn.execute("COMMIT;")?;
+
+        Ok(())
+    }
 }

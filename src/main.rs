@@ -1,9 +1,9 @@
 mod database;
+mod template;
 
 use anyhow::Result;
 use clap::{Arg, Command};
 use prettytable::{row, Table};
-use std::fs::create_dir;
 use std::path::PathBuf;
 
 const DATABASE_FILE: &str = "tally.db";
@@ -38,20 +38,11 @@ async fn main() -> Result<()> {
                         .help("Set the count to this integer"),
                 )
                 .arg(
-                    Arg::new("inc")
+                    Arg::new("step")
                         .required(false)
-                        .long("inc")
-                        .short('i')
+                        .long("step")
+                        .short('s')
                         .help("Default increment amount for given counter"),
-                )
-                .arg(
-                    // TODO are the inc and dec not the same step value?
-                    // Consider this further...
-                    Arg::new("dec")
-                        .required(false)
-                        .long("dec")
-                        .short('d')
-                        .help("Default decrement amount for given counter"),
                 )
                 .arg(
                     Arg::new("template")
@@ -64,11 +55,12 @@ async fn main() -> Result<()> {
                     Arg::new("default")
                         .required(false)
                         .long("default")
+                        .action(clap::ArgAction::SetTrue)
                         .help("Provided counter becomes the default"),
                 ),
         )
         .subcommand(
-            Command::new("inc").about("Increment a given counter").arg(
+            Command::new("add").about("Increment a given counter").arg(
                 Arg::new("amount")
                     .required(false)
                     .index(1)
@@ -76,7 +68,7 @@ async fn main() -> Result<()> {
             ),
         )
         .subcommand(
-            Command::new("dec").about("Decrement a given counter").arg(
+            Command::new("sub").about("Decrement a given counter").arg(
                 Arg::new("amount")
                     .required(false)
                     .index(1)
@@ -125,10 +117,23 @@ async fn main() -> Result<()> {
     // divert logic to subcommand
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
-            println!("Running set {:?}", sub_mat);
-        } // TODO should we change inc/dec -> add/sub?
-        // Easier to add mul/div later too
-        Some(("inc", sub_mat)) => {
+            if let Some(count) = sub_mat.get_one::<String>("count").cloned() {
+                db.set_count(&name, count.parse()?)?;
+            }
+
+            if let Some(step) = sub_mat.get_one::<String>("step").cloned() {
+                db.set_step(&name, step.parse()?)?;
+            }
+
+            if let Some(template) = sub_mat.get_one::<String>("template").cloned() {
+                db.set_template(&name, &template)?;
+            }
+
+            if let Some(default) = sub_mat.get_one::<bool>("default").cloned() {
+                db.set_default(&name, default)?;
+            }
+        }
+        Some(("add", sub_mat)) => {
             let mut amount: i64 = db.get_step(&name)?;
             if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
                 amount = given.parse()?;
@@ -136,7 +141,7 @@ async fn main() -> Result<()> {
             let count = db.increment_and_get_count(&name, amount)?;
             print_count(count);
         }
-        Some(("dec", sub_mat)) => {
+        Some(("sub", sub_mat)) => {
             let mut amount: i64 = db.get_step(&name)?;
             if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
                 amount = given.parse()?;
@@ -150,9 +155,9 @@ async fn main() -> Result<()> {
             // Create and format table
             let mut table = Table::new();
             let format = prettytable::format::FormatBuilder::new()
-                .column_separator(' ') // No column separators
-                .borders(' ') // No borders around the table
-                .padding(0, 1) // No padding
+                .column_separator(' ')
+                .borders(' ')
+                .padding(0, 1)
                 .build();
             table.set_format(format);
             table.add_row(row!["Name", "Count", "Step", "Template", "Default"]);
