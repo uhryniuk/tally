@@ -3,11 +3,11 @@ use sqlite::{ConnectionThreadSafe, Value};
 
 #[derive(Debug)]
 pub struct Counter {
-    name: String,
-    count: i64,
-    step: i64,
-    template: String,
-    is_default: bool,
+    pub name: String,
+    pub count: i64,
+    pub step: i64,
+    pub template: String,
+    pub is_default: bool,
 }
 
 pub struct Database {
@@ -43,7 +43,7 @@ impl Database {
         if let Some(row) = stmt.iter().next() {
             if let sqlite::Value::Integer(count) = &row?[0] {
                 if *count == 0 {
-                    self.create_counter("tally", 0, 0, "{}", true)?;
+                    self.create_counter("tally", 0, 1, "{}", true)?;
                 }
             }
         }
@@ -117,7 +117,7 @@ impl Database {
         )?;
         stmt.bind((1, name))?;
         stmt.bind((2, 0))?;
-        stmt.bind((3, 0))?;
+        stmt.bind((3, 1))?;
         stmt.bind((4, "{}"))?;
         stmt.bind((5, false as i64))?;
         stmt.next()?;
@@ -133,14 +133,12 @@ impl Database {
         self.conn.execute("BEGIN TRANSACTION;")?;
 
         let mut update_stmt = match op {
-            '+' => {
-                self.conn
-                    .prepare("UPDATE counters SET count = count + ? WHERE name = ?;")?;
-            }
-            '-' => {
-                self.conn
-                    .prepare("UPDATE counters SET count = count - ? WHERE name = ?;")?;
-            }
+            '+' => self
+                .conn
+                .prepare("UPDATE counters SET count = count + ? WHERE name = ?;")?,
+            '-' => self
+                .conn
+                .prepare("UPDATE counters SET count = count - ? WHERE name = ?;")?,
             _ => {
                 eprintln!("Couldn't update count");
                 std::process::exit(1);
@@ -230,5 +228,19 @@ impl Database {
         }
 
         Ok(rows)
+    }
+
+    pub fn get_step(&self, name: &str) -> Result<i64> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT step FROM counters WHERE name = ?;")?;
+        stmt.bind((1, name))?;
+
+        while let Ok(sqlite::State::Row) = stmt.next() {
+            let step = stmt.read::<i64, usize>(0)?;
+            return Ok(step);
+        }
+
+        Err(anyhow::anyhow!("Unable to get 'step' value for '{}'", name))
     }
 }

@@ -2,6 +2,12 @@ mod database;
 
 use anyhow::Result;
 use clap::{Arg, Command};
+use prettytable::{row, Table};
+use std::fs::create_dir;
+use std::path::PathBuf;
+
+const DATABASE_FILE: &str = "tally.db";
+const DATA_DIR: &str = ".tally";
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -89,12 +95,15 @@ async fn main() -> Result<()> {
 
     let matches = app.get_matches();
 
-    // NOTE List of future features (not MVP)
-    // Parse config file (contains database location, default counter name) - Future
-    // Check if data dir exists, if not create
-    // Check if database file exists, if not create, seed database
+    // Create the ~/.tally directory db file
+    let home: PathBuf = std::env::home_dir().expect("Couldn't get $HOME directory");
+    let data_dir = home.join(PathBuf::from(DATA_DIR));
+    std::fs::create_dir_all(data_dir.clone())?;
 
-    let db = database::Database::new("database.db").expect("Couldn't connect to database");
+    // Create path to database file and initialize
+    let database_path = data_dir.join(PathBuf::from(DATABASE_FILE));
+    let db = database::Database::new(&database_path.to_string_lossy())
+        .expect("Cannot connect to database.");
 
     // parse top level args
     let default_name = db.get_default_counter()?;
@@ -104,40 +113,64 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|| default_name.clone());
 
     let is_raw = matches.get_flag("raw");
+    let print_count = |count: i64| {
+        if is_raw {
+            println!("{}", count);
+        } else {
+            // TODO add render template call
+            println!("{}", count)
+        }
+    };
 
     // divert logic to subcommand
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
             println!("Running set {:?}", sub_mat);
-        }
+        } // TODO should we change inc/dec -> add/sub?
+        // Easier to add mul/div later too
         Some(("inc", sub_mat)) => {
-            let step = 1; // TODO remove hardcoded amount to increment by.
-            let count = db.increment_and_get_count(&name, step)?;
-            println!("{}", count);
+            let mut amount: i64 = db.get_step(&name)?;
+            if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
+                amount = given.parse()?;
+            }
+            let count = db.increment_and_get_count(&name, amount)?;
+            print_count(count);
         }
         Some(("dec", sub_mat)) => {
-            let amount = 1; // TODO remove hardcoded amount to increment by.
+            let mut amount: i64 = db.get_step(&name)?;
+            if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
+                amount = given.parse()?;
+            }
+
             let count = db.decrement_and_get_count(&name, amount)?;
-            println!("{}", count);
+            print_count(count);
         }
         Some(("delete", _sub_mat)) => db.delete_counter(&name)?,
         Some(("list", _sub_mat)) => {
-            // TODO add better table printing
+            // Create and format table
+            let mut table = Table::new();
+            let format = prettytable::format::FormatBuilder::new()
+                .column_separator(' ') // No column separators
+                .borders(' ') // No borders around the table
+                .padding(0, 1) // No padding
+                .build();
+            table.set_format(format);
+            table.add_row(row!["Name", "Count", "Step", "Template", "Default"]);
+
+            // Add rows of data to table
             let rows = db.get_all_counters()?;
             for row in rows.iter() {
-                println!("{:?}", row)
+                table.add_row(row![
+                    row.name,
+                    row.count,
+                    row.step,
+                    row.template, // TODO render the template here, or replace with None
+                    row.is_default
+                ]);
             }
+            table.printstd();
         }
-        None => {
-            let count = db.get_count(&name)?;
-
-            if is_raw {
-                println!("{}", count);
-            } else {
-                // TODO add render template call
-                println!("{}", count)
-            }
-        }
+        None => print_count(db.get_count(&name)?),
         _ => {
             eprintln!("Weird context error");
             std::process::exit(1);
