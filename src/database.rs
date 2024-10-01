@@ -320,4 +320,26 @@ impl Database {
 
         Ok(())
     }
+
+    pub fn get_template(&self, name: &str) -> Result<String> {
+        // get write lock
+        self.conn.execute("BEGIN TRANSACTION;")?;
+
+        let mut stmt = self
+            .conn
+            .prepare("SELECT template FROM counters WHERE name = ?")?;
+
+        stmt.bind((1, name))?;
+
+        // return count if exists
+        if let Some(row) = stmt.iter().next() {
+            if let sqlite::Value::String(template) = &row?[0] {
+                self.conn.execute("COMMIT;")?;
+                return Ok(template.clone());
+            }
+        }
+
+        self.conn.execute("COMMIT;")?;
+        Err(anyhow::anyhow!("Couldn't get template for '{}'", name))
+    }
 }

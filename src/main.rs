@@ -87,7 +87,7 @@ async fn main() -> Result<()> {
 
     let matches = app.get_matches();
 
-    // Create the ~/.tally directory db file
+    // Create the ~/.tally directory and db file
     let home: PathBuf = std::env::home_dir().expect("Couldn't get $HOME directory");
     let data_dir = home.join(PathBuf::from(DATA_DIR));
     std::fs::create_dir_all(data_dir.clone())?;
@@ -105,13 +105,13 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|| default_name.clone());
 
     let is_raw = matches.get_flag("raw");
-    let print_count = |count: i64| {
+    let print_count = || -> Result<()> {
         if is_raw {
-            println!("{}", count);
+            println!("{}", db.get_count(&name)?);
         } else {
-            // TODO add render template call
-            println!("{}", count)
+            println!("{}", template::render(&db, &name)?);
         }
+        Ok(())
     };
 
     // divert logic to subcommand
@@ -130,7 +130,9 @@ async fn main() -> Result<()> {
             }
 
             if let Some(default) = sub_mat.get_one::<bool>("default").cloned() {
-                db.set_default(&name, default)?;
+                if default {
+                    db.set_default(&name, default)?;
+                }
             }
         }
         Some(("add", sub_mat)) => {
@@ -138,8 +140,8 @@ async fn main() -> Result<()> {
             if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
                 amount = given.parse()?;
             }
-            let count = db.increment_and_get_count(&name, amount)?;
-            print_count(count);
+            let _count = db.increment_and_get_count(&name, amount)?;
+            print_count()?;
         }
         Some(("sub", sub_mat)) => {
             let mut amount: i64 = db.get_step(&name)?;
@@ -147,8 +149,8 @@ async fn main() -> Result<()> {
                 amount = given.parse()?;
             }
 
-            let count = db.decrement_and_get_count(&name, amount)?;
-            print_count(count);
+            let _count = db.decrement_and_get_count(&name, amount)?;
+            print_count()?;
         }
         Some(("delete", _sub_mat)) => db.delete_counter(&name)?,
         Some(("list", _sub_mat)) => {
@@ -169,15 +171,18 @@ async fn main() -> Result<()> {
                     row.name,
                     row.count,
                     row.step,
-                    row.template, // TODO render the template here, or replace with None
+                    row.template,
                     row.is_default
                 ]);
             }
             table.printstd();
         }
-        None => print_count(db.get_count(&name)?),
+        None => {
+            db.get_count(&name)?; // implicitly creates the tally
+            print_count()?;
+        }
         _ => {
-            eprintln!("Weird context error");
+            eprintln!("Weird error");
             std::process::exit(1);
         }
     }

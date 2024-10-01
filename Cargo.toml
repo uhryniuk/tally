@@ -24,4 +24,5 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 sqlite = "0.36.1"
 prettytable-rs = "0.10.0"
+regex = "1.11.0"
 
