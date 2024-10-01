@@ -9,10 +9,7 @@ use std::path::PathBuf;
 const DATABASE_FILE: &str = "tally.db";
 const DATA_DIR: &str = ".tally";
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-
+fn main() -> Result<()> {
     let app = Command::new("tally")
         .about("A global counter")
         .arg(

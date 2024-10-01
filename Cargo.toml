@@ -16,12 +16,8 @@ name = "tally"
 path = "src/main.rs"
 
 [dependencies]
-tokio = { version = "1.40.0", features = ["rt-multi-thread", "io-util", "macros", "net", "time"] }
 clap = { version = "4.5.18", features = ["derive", "env"] }
 anyhow = { version = "1.0.89", features = ["backtrace"] }
-tokio-util = { version = "0.7.12", features = ["codec"] }
-tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
 sqlite = "0.36.1"
 prettytable-rs = "0.10.0"
 regex = "1.11.0"
