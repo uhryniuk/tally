@@ -110,10 +110,27 @@ impl Database {
             }
         }
 
-        // if no count found, implcitly create a counter
+        // release write lock
+        self.conn.execute("COMMIT;")?;
+
+        Ok(0)
+    }
+
+    pub fn init_counter(&self, name: &str) -> Result<()> {
+        self.conn.execute("BEGIN TRANSACTION;")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM counters WHERE name = ?;")?;
+        stmt.bind((1, name))?;
+
+        if let Ok(sqlite::State::Row) = stmt.next() {
+            self.conn.execute("COMMIT;")?;
+            return Ok(());
+        }
+
         let mut stmt = self.conn.prepare(
             "INSERT INTO counters (name, count, step, template, is_default) 
-            VALUES (?, ?, ?, ?, ?)",
+             VALUES (?, ?, ?, ?, ?)",
         )?;
         stmt.bind((1, name))?;
         stmt.bind((2, 0))?;
@@ -121,11 +138,9 @@ impl Database {
         stmt.bind((4, "{}"))?;
         stmt.bind((5, false as i64))?;
         stmt.next()?;
-
-        // release write lock
         self.conn.execute("COMMIT;")?;
 
-        Ok(0)
+        Ok(())
     }
 
     fn update_and_get_count(&self, name: &str, amount: i64, op: char) -> Result<i64> {

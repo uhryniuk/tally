@@ -133,6 +133,7 @@ fn main() -> Result<()> {
             }
         }
         Some(("add", sub_mat)) => {
+            db.init_counter(&name)?;
             let mut amount: i64 = db.get_step(&name)?;
             if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
                 amount = given.parse()?;
@@ -141,6 +142,7 @@ fn main() -> Result<()> {
             print_count()?;
         }
         Some(("sub", sub_mat)) => {
+            db.init_counter(&name)?;
             let mut amount: i64 = db.get_step(&name)?;
             if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
                 amount = given.parse()?;
@@ -175,6 +177,7 @@ fn main() -> Result<()> {
             table.printstd();
         }
         None => {
+            db.init_counter(&name)?;
             db.get_count(&name)?; // implicitly creates the tally
             print_count()?;
         }
