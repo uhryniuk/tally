@@ -80,7 +80,17 @@ fn main() -> Result<()> {
                     .help("Counter to delete"),
             ),
         )
-        .subcommand(Command::new("list").about("List all of the active counters"));
+        .subcommand(
+            Command::new("list")
+                .about("List all of the active counters")
+                .arg(
+                    Arg::new("no-headers")
+                        .long("no-headers")
+                        .required(false)
+                        .action(clap::ArgAction::SetTrue)
+                        .help("List counters without column headers"),
+                ),
+        );
 
     let matches = app.get_matches();
 
@@ -152,7 +162,7 @@ fn main() -> Result<()> {
             print_count()?;
         }
         Some(("delete", _sub_mat)) => db.delete_counter(&name)?,
-        Some(("list", _sub_mat)) => {
+        Some(("list", sub_mat)) => {
             // Create and format table
             let mut table = Table::new();
             let format = prettytable::format::FormatBuilder::new()
@@ -162,6 +172,10 @@ fn main() -> Result<()> {
                 .build();
             table.set_format(format);
             table.add_row(row!["Name", "Count", "Step", "Template", "Default"]);
+
+            if let Some(_no_headers) = sub_mat.get_one::<bool>("no-headers").cloned() {
+                table.remove_row(0);
+            }
 
             // Add rows of data to table
             let rows = db.get_all_counters()?;
