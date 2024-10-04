@@ -1,11 +1,11 @@
 [package]
-name = "tally"
+name = "tally-cli"
 version = "0.1.0"
 authors = ["Dylan Uhryniuk <duhry99@gmail.com>"]
 license = "MIT"
-description = ""
 repository = "https://github.com/uhryniuk/tally"
 documentation = "https://docs.rs/tally"
+description = "A CLI for managing counters in the terminal"
 keywords = ["cli"]
 categories = ["command-line-utilities"]
 readme = "README.md"

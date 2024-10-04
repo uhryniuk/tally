@@ -57,20 +57,40 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(
-            Command::new("add").about("Increment a given counter").arg(
-                Arg::new("amount")
-                    .required(false)
-                    .index(1)
-                    .help("Amount to increment the counter by"),
-            ),
+            Command::new("add")
+                .about("Increment a given counter")
+                .arg(
+                    Arg::new("amount")
+                        .required(false)
+                        .index(1)
+                        .help("Amount to increment the counter by"),
+                )
+                .arg(
+                    Arg::new("quiet")
+                        .required(false)
+                        .long("quiet")
+                        .short('q')
+                        .action(clap::ArgAction::SetTrue)
+                        .help("Add to counter but don't write to stdout."),
+                ),
         )
         .subcommand(
-            Command::new("sub").about("Decrement a given counter").arg(
-                Arg::new("amount")
-                    .required(false)
-                    .index(1)
-                    .help("Amount to decrement the counter by"),
-            ),
+            Command::new("sub")
+                .about("Decrement a given counter")
+                .arg(
+                    Arg::new("amount")
+                        .required(false)
+                        .index(1)
+                        .help("Amount to decrement the counter by"),
+                )
+                .arg(
+                    Arg::new("quiet")
+                        .required(false)
+                        .long("quiet")
+                        .short('q')
+                        .action(clap::ArgAction::SetTrue)
+                        .help("Subtract from counter but don't write to stdout."),
+                ),
         )
         .subcommand(
             Command::new("delete").about("Delete a given counter").arg(
@@ -148,8 +168,13 @@ fn main() -> Result<()> {
             if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
                 amount = given.parse()?;
             }
+
             let _count = db.increment_and_get_count(&name, amount)?;
-            print_count()?;
+
+            let is_quiet = sub_mat.get_one::<bool>("quiet").cloned().unwrap();
+            if !is_quiet {
+                print_count()?;
+            }
         }
         Some(("sub", sub_mat)) => {
             db.init_counter(&name)?;
@@ -159,7 +184,11 @@ fn main() -> Result<()> {
             }
 
             let _count = db.decrement_and_get_count(&name, amount)?;
-            print_count()?;
+
+            let is_quiet = sub_mat.get_one::<bool>("quiet").cloned().unwrap();
+            if !is_quiet {
+                print_count()?;
+            }
         }
         Some(("delete", _sub_mat)) => db.delete_counter(&name)?,
         Some(("list", sub_mat)) => {
@@ -173,7 +202,8 @@ fn main() -> Result<()> {
             table.set_format(format);
             table.add_row(row!["Name", "Count", "Step", "Template", "Default"]);
 
-            if let Some(_no_headers) = sub_mat.get_one::<bool>("no-headers").cloned() {
+            let has_headers = sub_mat.get_one::<bool>("no-headers").cloned().unwrap();
+            if has_headers {
                 table.remove_row(0);
             }
 
@@ -192,7 +222,7 @@ fn main() -> Result<()> {
         }
         None => {
             db.init_counter(&name)?;
-            db.get_count(&name)?; // implicitly creates the tally
+            db.get_count(&name)?;
             print_count()?;
         }
         _ => {
