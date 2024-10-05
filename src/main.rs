@@ -110,7 +110,8 @@ fn main() -> Result<()> {
                         .action(clap::ArgAction::SetTrue)
                         .help("List counters without column headers"),
                 ),
-        );
+        )
+        .subcommand(Command::new("nuke").about("Nuke the counter database"));
 
     let matches = app.get_matches();
 
@@ -121,7 +122,7 @@ fn main() -> Result<()> {
 
     // Create path to database file and initialize
     let database_path = data_dir.join(PathBuf::from(DATABASE_FILE));
-    let db = database::Database::new(&database_path.to_string_lossy())
+    let db = database::Database::new(&database_path.clone().to_string_lossy())
         .expect("Cannot connect to database.");
 
     // parse top level args
@@ -219,6 +220,9 @@ fn main() -> Result<()> {
                 ]);
             }
             table.printstd();
+        }
+        Some(("nuke", _sub_mat)) => {
+            std::fs::remove_file(database_path)?;
         }
         None => {
             db.init_counter(&name)?;
