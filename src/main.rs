@@ -4,6 +4,7 @@ mod template;
 use anyhow::Result;
 use clap::{Arg, Command};
 use prettytable::{row, Table};
+use std::io::{self, Write};
 use std::path::PathBuf;
 
 const DATABASE_FILE: &str = "tally.db";
@@ -222,7 +223,18 @@ fn main() -> Result<()> {
             table.printstd();
         }
         Some(("nuke", _sub_mat)) => {
-            std::fs::remove_file(database_path)?;
+            print!("Are you sure wish to nuke? (y/n): ");
+            std::io::stdout().flush().unwrap();
+
+            let mut input = String::new();
+            std::io::stdin()
+                .read_line(&mut input)
+                .expect("Failed to read line");
+
+            if input.to_lowercase().trim() == "y" {
+                println!("Database deleted successfully.");
+                std::fs::remove_file(database_path)?;
+            }
         }
         None => {
             db.init_counter(&name)?;
@@ -230,7 +242,7 @@ fn main() -> Result<()> {
             print_count()?;
         }
         _ => {
-            eprintln!("Weird error");
+            eprintln!("Unable to hanlde input");
             std::process::exit(1);
         }
     }

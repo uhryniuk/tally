@@ -20,13 +20,16 @@ This will install `tally` in your PATH and after running the `tally` base comman
 
 ## Installation
 
-- cargo support
-- docker support
-- apt or snap support
-- brew support
+Shown above, you can easily install `tally` if you already have Rust and cargo installed on your machine.
 
 ```
 cargo install tally-cli
+```
+
+Optionally, you can play around with tally in a container with the following command.
+
+```
+docker run --name tally --rm -it tally
 ```
 
 ## Detailed Usage
@@ -111,11 +114,11 @@ $ tally beaver delete
 `tally` offers options that can be updated using the `tally set` subcommand. The options include
 
 * *Count*: Set the current value of the provided counter
-* *Step*: The amount to step the counter when add/sub is called.
-* *Template*: Template to render when the `tally <name>` command is called
-* *Default*: Count to render and operate on when the base `tally` command is called without a name.
+* *Step*: The amount to add/sub when the command is used.
+* *Template*: Template to render when the `tally <name>` command is used.
+* *Default*: Counter to use when the base `tally` command is called without a name.
 
-These examples demonstrate the extent in which these features could be leverage.
+These examples demonstrate the extent in which these features could be leveraged.
 
 #### Updating count and step
 
@@ -158,13 +161,13 @@ $ tally list
 The templates in `tally` can reference one another, making it easy to start managing complex counting states.
 
 ```bash
-# '{}' is reserved for render the count.
+# '{}' is reserved to render the count.
 $ tally set --count 100 --template doody-{}
 
 $ tally cookie
 0
 
-# Use the name in '{}', to reference and render another counter
+# Use the name in '{}' to reference another counter
 $ tally cookie set --count 200 --template howdy-{tally}-{}
 
 $ tally cookie
@@ -179,7 +182,7 @@ Below demonstrates some of the other features pertaining to `tally`.
 
 #### raw
 
-Print the counter value alone if a template is set.
+Print the counter value even if a template is set.
 
 ```bash
 $ tally set --count 10 --template some-template-{}
@@ -209,9 +212,8 @@ $ tally list
 
 
 $ tally nuke
-
-Do you wish to nuke the database? (y/n)
-y
+Are you sure wish to nuke? (y/n): y
+Database deleted successfully.
 
 $ tally list
  Name         Count  Step  Template  Default  
