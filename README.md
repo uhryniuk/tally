@@ -177,6 +177,7 @@ Add or subtract from a counter without printing to stdout.
 $ tally add 100 -q # '--quiet' works too
 ```
 
+
 #### nuke
 
 A SQLite database is maintained at `~/.tally/tally.db`, you are able to manually delete it or optionally use the `tally nuke` subcommand.
