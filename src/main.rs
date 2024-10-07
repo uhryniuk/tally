@@ -3,8 +3,9 @@ mod template;
 
 use anyhow::Result;
 use clap::{Arg, Command};
+use dirs::home_dir;
 use prettytable::{row, Table};
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::PathBuf;
 
 const DATABASE_FILE: &str = "tally.db";
@@ -117,7 +118,7 @@ fn main() -> Result<()> {
     let matches = app.get_matches();
 
     // Create the ~/.tally directory and db file
-    let home: PathBuf = std::env::home_dir().expect("Couldn't get $HOME directory");
+    let home: PathBuf = home_dir().expect("Couldn't get $HOME directory");
     let data_dir = home.join(PathBuf::from(DATA_DIR));
     std::fs::create_dir_all(data_dir.clone())?;
 
