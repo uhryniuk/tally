@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - main
-  workflow_run:
-    workflows: ["Rust lint, build and test"]
-    types:
-      - completed
+  # workflow_run:
+  #   workflows: ["Rust lint, build and test"]
+  #   types:
+  #     - completed
 
 jobs:
   build-and-push:

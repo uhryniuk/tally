@@ -188,7 +188,6 @@ $ tally list
  tally        50     1     {}        false
  sugar        123    3     {}        true
 
-
 $ tally nuke
 Are you sure wish to nuke? (y/n): y
 Database deleted successfully.
