@@ -1,6 +1,6 @@
 [package]
 name = "tally-cli"
-version = "0.1.0"
+version = "0.1.2"
 authors = ["Dylan Uhryniuk <duhry99@gmail.com>"]
 license = "MIT"
 repository = "https://github.com/uhryniuk/tally"
@@ -21,4 +21,5 @@ anyhow = { version = "1.0.89", features = ["backtrace"] }
 sqlite = "0.36.1"
 prettytable-rs = "0.10.0"
 regex = "1.11.0"
+dirs = "5.0.1"
 

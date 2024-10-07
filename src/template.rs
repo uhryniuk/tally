@@ -4,8 +4,8 @@ use regex::Regex;
 
 pub fn render(db: &Database, name: &str) -> Result<String> {
     // parse template, finding replace
-    let template = db.get_template(&name)?;
-    let count = db.get_count(&name)?;
+    let template = db.get_template(name)?;
+    let count = db.get_count(name)?;
     let mut rendered = template.replace("{}", &count.to_string());
 
     // Create the regex pattern to match anything inside {}

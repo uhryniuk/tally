@@ -106,7 +106,7 @@ impl Database {
         if let Some(row) = stmt.iter().next() {
             if let sqlite::Value::Integer(count) = &row?[0] {
                 self.conn.execute("COMMIT;")?;
-                return Ok(count.clone());
+                return Ok(*count);
             }
         }
 
@@ -173,7 +173,7 @@ impl Database {
 
         let row = query_stmt.iter().next().unwrap();
         let count: i64 = match &row?[0] {
-            Value::Integer(count) => count.clone(),
+            Value::Integer(count) => *count,
             _ => {
                 eprintln!("couldn't get updated count");
                 std::process::exit(1);
@@ -251,7 +251,7 @@ impl Database {
             .prepare("SELECT step FROM counters WHERE name = ?;")?;
         stmt.bind((1, name))?;
 
-        while let Ok(sqlite::State::Row) = stmt.next() {
+        if let Ok(sqlite::State::Row) = stmt.next() {
             let step = stmt.read::<i64, usize>(0)?;
             return Ok(step);
         }
