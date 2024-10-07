@@ -29,34 +29,12 @@ cargo install tally-cli
 Optionally, you can play around with tally in a container with the following command.
 
 ```
-docker run --name tally --rm -it tally
+docker run --name tally --rm -it docker.io/uhryniuk/tally
 ```
 
 ## Detailed Usage
 
 This section describes detailed usage for the `tally` CLI command.
-
-```
-A global counter
-
-Usage: tally [OPTIONS] [name] [COMMAND]
-
-Commands:
-  set     Set configuration of the provided counter
-  add     Increment a given counter
-  sub     Decrement a given counter
-  delete  Delete a given counter
-  list    List all of the active counters
-  help    Print this message or the help of the given subcommand(s)
-
-Arguments:
-  [name]  Name of counter
-
-Options:
-      --raw   Render counter without template (if template is set)
-  -h, --help  Print help
-
-```
 
 ### Basic Usage
 
