@@ -1,0 +1,67 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Install a specific version of Rust (e.g., 1.68.0)
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      # Install rustfmt, clippy, and other components
+      - name: Install rustfmt, clippy, and audit
+        run: |
+          rustup component add rustfmt clippy
+          cargo install cargo-audit
+
+      # Run rustfmt to check code formatting
+      - name: Check formatting with rustfmt
+        run: cargo fmt -- --check
+
+      # Run clippy to check for linting issues
+      - name: Run Clippy for linting
+        run: cargo clippy -- -D warnings
+
+      # Run cargo audit to check for security vulnerabilities
+      - name: Run cargo audit for security vulnerabilities
+        run: cargo audit
+
+      # Build the project
+      - name: Build project
+        run: cargo build --release
+
+      # Run the tests
+      - name: Run tests
+        run: cargo test
+
+      # Check if version has been incremented
+      - name: Ensure version has been incremented
+        run: |
+          VERSION_BASE=$(git show origin/main:Cargo.toml | grep '^version = ' | awk '{ print $3 }' | tr -d '"')
+          VERSION_HEAD=$(grep '^version = ' Cargo.toml | awk '{ print $3 }' | tr -d '"')
+          echo "Base version: $VERSION_BASE"
+          echo "Head version: $VERSION_HEAD"
+          if [ "$VERSION_BASE" = "$VERSION_HEAD" ]; then
+            echo "Error: Cargo.toml version has not been incremented!"
+            exit 1
+          else
+            echo "Version has been incremented."
+          fi
