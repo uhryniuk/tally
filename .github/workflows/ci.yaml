@@ -1,0 +1,49 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+
+      - name: set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: install dependencies
+        run: |
+          rustup component add rustfmt clippy
+          cargo install cargo-audit
+
+      - name: check formatting
+        run: cargo fmt -- --check
+
+      - name: run linting
+        run: cargo clippy -- -D warnings
+
+      - name: audit for vulnerabilities
+        run: cargo audit
+
+      - name: build project
+        run: cargo build --release
+
+      - name: run tests
+        run: cargo test
+

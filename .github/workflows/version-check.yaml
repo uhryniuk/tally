@@ -1,0 +1,28 @@
+name: version-check
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v3
+
+      - name: ensure version has been incremented
+        run: |
+          VERSION_BASE=$(git show origin/main:Cargo.toml | grep '^version = ' | awk '{ print $3 }' | tr -d '"')
+          VERSION_HEAD=$(grep '^version = ' Cargo.toml | awk '{ print $3 }' | tr -d '"')
+          echo "Base version: $VERSION_BASE"
+          echo "Head version: $VERSION_HEAD"
+          if [ "$VERSION_BASE" = "$VERSION_HEAD" ]; then
+            echo "Error: Cargo.toml version has not been incremented!"
+            exit 1
+          else
+            echo "Version has been incremented."
+          fi
