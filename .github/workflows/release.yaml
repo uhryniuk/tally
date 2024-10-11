@@ -1,5 +1,3 @@
-# Creates tag, release page and uploads release binary to it.
-# TODO refactor this with other pipelines.
 name: auto-release
 
 on:
@@ -11,56 +9,84 @@ jobs:
   create-tag-release:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        target: 
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - aarch64-apple-darwin
+
     steps:
       # Step 1: Check out the code
       - name: Checkout code
         uses: actions/checkout@v3
+      
+      - name: Install cross-compilers
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu \
+            gcc-x86-64-linux-gnu \
+            libssl-dev pkg-config
 
       # Step 2: Calculate the next version tag
       - name: Calculate next tag
         id: tag_version
         run: |
-          # Fetch existing tags
-          git fetch --tags
-
-          # Get the latest tag and calculate the new version
-          latest_tag=$(git describe --tags --abbrev=0)
-          tag_version=${latest_tag:-"v0.0.0"}
-
-          # Increment the patch version (you can adjust this to major/minor)
-          new_version=$(echo $tag_version | awk -F. '{$NF+=1; OFS="."; print $0}')
+          new_version=$(grep '^version = ' Cargo.toml | awk '{ print $3 }' | tr -d '"')
           echo "New version: $new_version"
 
+          # Check if the tag already exists
+          if git rev-parse "v$new_version" >/dev/null 2>&1; then
+            echo "Tag v$new_version already exists. Exiting."
+            exit 1
+          fi
+
           # Set output for other steps
-          echo "::set-output name=tag::$new_version"
+          echo "NEW_VERSION=v$new_version" >> $GITHUB_ENV
+          echo "NEW_VERSION=v$new_version"
+      
+      # Step 3: Install Rust toolchain and required targets
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rust-src
 
-      # Step 3: Build your project (replace with your build process)
-      - name: Build the project
-        run: |
-          # Example build steps (adjust based on your project)
-          # For example, for Rust:
-          cargo build --release
+      # Step 4: Install the target architectures
+      - name: Install targets
+        run: rustup target add ${{ matrix.target }}
 
-      # Step 4: Compress build output (optional)
+      # Step 5: Build using cargo
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # Step 6: Compress build output for each architecture
       - name: Compress artifacts
         run: |
-          tar -czvf build_artifacts.tar.gz ./target/release/
+          mkdir -p artifacts
+          tar -czvf artifacts/${{ matrix.target }}-build_artifacts.tar.gz -C target/${{ matrix.target }}/release .
 
-      # Step 5: Create the new tag
+      # Step 7: Create the new tag
       - name: Create new tag
         run: |
-          git tag ${{ steps.tag_version.outputs.tag }}
-          git push origin ${{ steps.tag_version.outputs.tag }}
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag ${{ env.NEW_VERSION }}
+          git push origin ${{ env.NEW_VERSION }}
 
-      # Step 6: Upload the release assets (artifacts)
+      # Step 8: Upload the release artifacts for this architecture
       - name: Create GitHub Release and Upload Artifacts
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.tag_version.outputs.tag }}
-          release_name: "Release ${{ steps.tag_version.outputs.tag }}"
-          body: "Automated release for version ${{ steps.tag_version.outputs.tag }}"
+          tag_name: ${{ env.NEW_VERSION }}
+          release_name: "Release ${{ env.NEW_VERSION }}"
+          body: "Automated release for version ${{ env.NEW_VERSION }}"
           draft: false
           prerelease: false
-          files: build_artifacts.tar.gz  # Upload the compressed build artifacts
+          files: artifacts/${{ matrix.target }}-build_artifacts.tar.gz
+
