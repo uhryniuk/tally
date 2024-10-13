@@ -1,6 +1,7 @@
 # tally
 
 [![Crates.io](https://img.shields.io/crates/v/tally-cli.svg)](https://crates.io/crates/tally-cli)
+![Docker Image Version](https://img.shields.io/docker/v/uhryniuk/tally/latest?color=blue&label=docker)
 
 A CLI tool to manage global counters from the command line. Written in Rust with SQLite, it's capable of managing interprocess usage and ideal for iterating and templating.
 
