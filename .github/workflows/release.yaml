@@ -1,15 +1,10 @@
-name: auto-release
-
-on:
-  schedule:
-    - cron: '0 0 */14 * *'  # Runs every 14 days at midnight UTC
-  workflow_dispatch:
+# NOTE: Depcrated pipeline, here for reference
+name: multi-build
 
 jobs:
   create-tag-release:
     runs-on: ${{ matrix.runner }}
  
-    # Define the build matrix for cross-compilation
     strategy:
       matrix:
         include:
@@ -62,22 +57,18 @@ jobs:
             BIN_SUFFIX=".exe"
           fi
  
-          # The built binary output location
           BIN_OUTPUT="target/${{ matrix.target }}/release/${PROJECT_NAME}${BIN_SUFFIX}"
  
-          # Define a better name for the final binary
           BIN_RELEASE="${PROJECT_NAME}-${{ matrix.name }}${BIN_SUFFIX}"
           BIN_RELEASE_VERSIONED="${PROJECT_NAME}-${{ github.ref_name }}-${{ matrix.name }}${BIN_SUFFIX}"
  
-          # Move the built binary where you want it
-          # mv "${BIN_OUTPUT}" "./<your-destination>/${BIN_RELEASE}"
+          mv "${BIN_OUTPUT}" "./<your-destination>/${BIN_RELEASE}"
 
       - name: Compress artifacts
         run: |
           mkdir -p artifacts
           tar -czvf artifacts/${{ matrix.target }}-build_artifacts.tar.gz -C target/${{ matrix.target }}/release .
 
-      # Step 7: Create the new tag
       - name: Create new tag
         run: |
           git config user.name "github-actions"
@@ -85,7 +76,6 @@ jobs:
           git tag ${{ env.NEW_VERSION }}
           git push origin ${{ env.NEW_VERSION }}
 
-      # Step 8: Upload the release artifacts for this architecture
       - name: Create GitHub Release and Upload Artifacts
         uses: actions/create-release@v1
         env:
