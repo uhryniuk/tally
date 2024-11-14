@@ -16,9 +16,12 @@ pub struct Database {
 
 impl Database {
     pub fn new(name: &str) -> Result<Database> {
-        let db = Database {
-            conn: sqlite::Connection::open_thread_safe(name)?,
-        };
+        // Create process and thread safe connection
+        let mut connection = sqlite::Connection::open_thread_safe(name).expect("ORPS");
+        connection.set_busy_timeout(5_000_000)?;
+        connection.execute("PRAGMA journal_mode = WAL;")?;
+
+        let db = Database { conn: connection };
         db.init_database()?;
         db.get_default_counter()?;
         Ok(db)
