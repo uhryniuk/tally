@@ -1,9 +1,11 @@
 mod database;
 mod template;
+mod models;
 
 use anyhow::Result;
 use clap::{Arg, Command};
 use dirs::home_dir;
+use models::Counter;
 use prettytable::{row, Table};
 use std::io::Write;
 use std::path::PathBuf;
@@ -117,29 +119,41 @@ fn main() -> Result<()> {
 
     let matches = app.get_matches();
 
-    // Create the ~/.tally directory and db file
+    // Create the ~/.tally directory and conn file
     let home: PathBuf = home_dir().expect("Couldn't get $HOME directory");
     let data_dir = home.join(PathBuf::from(DATA_DIR));
     std::fs::create_dir_all(data_dir.clone())?;
 
     // Create path to database file and initialize
     let database_path = data_dir.join(PathBuf::from(DATABASE_FILE));
-    let db = database::Database::new(&database_path.clone().to_string_lossy())
+    let conn = database::Connection::new(&database_path.clone().to_string_lossy())
         .expect("Cannot connect to database.");
 
     // parse top level args
-    let default_name = db.get_default_counter()?;
-    let name = matches
-        .get_one::<String>("name")
-        .cloned()
-        .unwrap_or_else(|| default_name.clone());
+    // let default_name = conn.get_default_counter()?;
+    // TODO impl the new default table
+    let default_name = "tally";
+    let name = match matches.get_one::<String>("name") {
+        Some(n) => n,
+        None => default_name
+    };
+
+    let mut counter = match Counter::get(conn.get(), name)? {
+        Some(c) => c,
+        None => {
+            let c = Counter::new(name);
+            c.insert(conn.get())?;
+            c
+        }
+    };
+
 
     let is_raw = matches.get_flag("raw");
-    let print_count = || -> Result<()> {
+    let print_count = |count| -> Result<()> {
         if is_raw {
-            println!("{}", db.get_count(&name)?);
+            println!("{}", count);
         } else {
-            println!("{}", template::render(&db, &name)?);
+            println!("{}", template::render(&conn, &counter.name)?);
         }
         Ok(())
     };
@@ -147,53 +161,45 @@ fn main() -> Result<()> {
     // divert logic to subcommand
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
-            if let Some(count) = sub_mat.get_one::<String>("count").cloned() {
-                db.set_count(&name, count.parse()?)?;
+
+            if let Some(count) = sub_mat.get_one::<i64>("count").cloned() {
+                counter.count = count;
             }
 
-            if let Some(step) = sub_mat.get_one::<String>("step").cloned() {
-                db.set_step(&name, step.parse()?)?;
+            if let Some(step) = sub_mat.get_one::<i64>("step").cloned() {
+                counter.step = step;
             }
 
             if let Some(template) = sub_mat.get_one::<String>("template").cloned() {
-                db.set_template(&name, &template)?;
+                counter.template = template
             }
 
-            if let Some(default) = sub_mat.get_one::<bool>("default").cloned() {
-                if default {
-                    db.set_default(&name, default)?;
-                }
-            }
         }
         Some(("add", sub_mat)) => {
-            db.init_counter(&name)?;
-            let mut amount: i64 = db.get_step(&name)?;
-            if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
-                amount = given.parse()?;
-            }
-
-            let _count = db.increment_and_get_count(&name, amount)?;
-
+            let amount = match sub_mat.get_one::<String>("amount") {
+                Some(amount) => amount.parse::<i64>()?,
+                None =>  counter.step,
+            };
+            
+            counter.count += amount;
             let is_quiet = sub_mat.get_one::<bool>("quiet").cloned().unwrap();
             if !is_quiet {
-                print_count()?;
+                print_count(counter.count)?;
             }
         }
         Some(("sub", sub_mat)) => {
-            db.init_counter(&name)?;
-            let mut amount: i64 = db.get_step(&name)?;
-            if let Some(given) = sub_mat.get_one::<String>("amount").cloned() {
-                amount = given.parse()?;
-            }
+            let amount = match sub_mat.get_one::<String>("amount") {
+                Some(amount) => amount.parse::<i64>()?,
+                None =>  counter.step,
+            };
 
-            let _count = db.decrement_and_get_count(&name, amount)?;
-
+            counter.count -= amount;
             let is_quiet = sub_mat.get_one::<bool>("quiet").cloned().unwrap();
             if !is_quiet {
-                print_count()?;
+                print_count(counter.count)?;
             }
         }
-        Some(("delete", _sub_mat)) => db.delete_counter(&name)?,
+        Some(("delete", _sub_mat)) => Counter::delete(conn.get(), &counter.name)?,
         Some(("list", sub_mat)) => {
             // Create and format table
             let mut table = Table::new();
@@ -211,14 +217,13 @@ fn main() -> Result<()> {
             }
 
             // Add rows of data to table
-            let rows = db.get_all_counters()?;
+            let rows = Counter::get_all(conn.get())?;
             for row in rows.iter() {
                 table.add_row(row![
                     row.name,
                     row.count,
                     row.step,
-                    row.template,
-                    row.is_default
+                    row.template
                 ]);
             }
             table.printstd();
@@ -238,15 +243,14 @@ fn main() -> Result<()> {
             }
         }
         None => {
-            db.init_counter(&name)?;
-            db.get_count(&name)?;
-            print_count()?;
+            print_count(counter.count)?;
         }
         _ => {
-            eprintln!("Unable to hanlde input");
+            eprintln!("Unable to handle input");
             std::process::exit(1);
         }
     }
-
+    
+    counter.update(conn.get())?;
     Ok(())
 }
