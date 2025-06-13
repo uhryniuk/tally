@@ -1,14 +1,13 @@
 use crate::database::Connection;
-use anyhow::{Result, anyhow};
-use regex::Regex;
 use crate::models::Counter;
+use anyhow::{anyhow, Result};
+use regex::Regex;
 
 pub fn render(conn: &Connection, name: &str) -> Result<String> {
-
     // parse template, finding replace
     let counter = match Counter::get(conn.get(), name)? {
         Some(c) => c,
-        None => return Err(anyhow!("Unable to find counter for templating"))
+        None => return Err(anyhow!("Unable to find counter for templating")),
     };
 
     let mut rendered = counter.template.replace("{}", &counter.count.to_string());

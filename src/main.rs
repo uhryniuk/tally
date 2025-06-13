@@ -1,6 +1,6 @@
 mod database;
-mod template;
 mod models;
+mod template;
 
 use anyhow::Result;
 use clap::{Arg, Command};
@@ -28,6 +28,14 @@ fn main() -> Result<()> {
                 .long("raw")
                 .action(clap::ArgAction::SetTrue)
                 .help("Render counter without template (if template is set)"),
+        )
+        .arg(
+            Arg::new("quiet")
+                .required(false)
+                .long("quiet")
+                .short('q')
+                .action(clap::ArgAction::SetTrue)
+                .help("Add to counter but don't write to stdout."),
         )
         .subcommand(
             Command::new("set")
@@ -61,40 +69,20 @@ fn main() -> Result<()> {
                 ),
         )
         .subcommand(
-            Command::new("add")
-                .about("Increment a given counter")
-                .arg(
-                    Arg::new("amount")
-                        .required(false)
-                        .index(1)
-                        .help("Amount to increment the counter by"),
-                )
-                .arg(
-                    Arg::new("quiet")
-                        .required(false)
-                        .long("quiet")
-                        .short('q')
-                        .action(clap::ArgAction::SetTrue)
-                        .help("Add to counter but don't write to stdout."),
-                ),
+            Command::new("add").about("Increment a given counter").arg(
+                Arg::new("amount")
+                    .required(false)
+                    .index(1)
+                    .help("Amount to increment the counter by"),
+            ),
         )
         .subcommand(
-            Command::new("sub")
-                .about("Decrement a given counter")
-                .arg(
-                    Arg::new("amount")
-                        .required(false)
-                        .index(1)
-                        .help("Amount to decrement the counter by"),
-                )
-                .arg(
-                    Arg::new("quiet")
-                        .required(false)
-                        .long("quiet")
-                        .short('q')
-                        .action(clap::ArgAction::SetTrue)
-                        .help("Subtract from counter but don't write to stdout."),
-                ),
+            Command::new("sub").about("Decrement a given counter").arg(
+                Arg::new("amount")
+                    .required(false)
+                    .index(1)
+                    .help("Amount to decrement the counter by"),
+            ),
         )
         .subcommand(
             Command::new("delete").about("Delete a given counter").arg(
@@ -135,7 +123,7 @@ fn main() -> Result<()> {
     let default_name = "tally";
     let name = match matches.get_one::<String>("name") {
         Some(n) => n,
-        None => default_name
+        None => default_name,
     };
 
     let mut counter = match Counter::get(conn.get(), name)? {
@@ -147,7 +135,7 @@ fn main() -> Result<()> {
         }
     };
 
-
+    let is_quiet = matches.get_one::<bool>("quiet").cloned().unwrap();
     let is_raw = matches.get_flag("raw");
     let print_count = |count| -> Result<()> {
         if is_raw {
@@ -161,7 +149,6 @@ fn main() -> Result<()> {
     // divert logic to subcommand
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
-
             if let Some(count) = sub_mat.get_one::<i64>("count").cloned() {
                 counter.count = count;
             }
@@ -173,16 +160,15 @@ fn main() -> Result<()> {
             if let Some(template) = sub_mat.get_one::<String>("template").cloned() {
                 counter.template = template
             }
-
         }
         Some(("add", sub_mat)) => {
             let amount = match sub_mat.get_one::<String>("amount") {
                 Some(amount) => amount.parse::<i64>()?,
-                None =>  counter.step,
+                None => counter.step,
             };
-            
+
             counter.count += amount;
-            let is_quiet = sub_mat.get_one::<bool>("quiet").cloned().unwrap();
+
             if !is_quiet {
                 print_count(counter.count)?;
             }
@@ -190,11 +176,11 @@ fn main() -> Result<()> {
         Some(("sub", sub_mat)) => {
             let amount = match sub_mat.get_one::<String>("amount") {
                 Some(amount) => amount.parse::<i64>()?,
-                None =>  counter.step,
+                None => counter.step,
             };
 
             counter.count -= amount;
-            let is_quiet = sub_mat.get_one::<bool>("quiet").cloned().unwrap();
+
             if !is_quiet {
                 print_count(counter.count)?;
             }
@@ -219,12 +205,7 @@ fn main() -> Result<()> {
             // Add rows of data to table
             let rows = Counter::get_all(conn.get())?;
             for row in rows.iter() {
-                table.add_row(row![
-                    row.name,
-                    row.count,
-                    row.step,
-                    row.template
-                ]);
+                table.add_row(row![row.name, row.count, row.step, row.template]);
             }
             table.printstd();
         }
@@ -243,14 +224,17 @@ fn main() -> Result<()> {
             }
         }
         None => {
-            print_count(counter.count)?;
+            if !is_quiet {
+                print_count(counter.count)?;
+            }
         }
         _ => {
             eprintln!("Unable to handle input");
             std::process::exit(1);
         }
     }
-    
+
     counter.update(conn.get())?;
+
     Ok(())
 }

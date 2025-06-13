@@ -13,7 +13,7 @@ impl Counter {
         Counter {
             name: name.to_string(),
             count: 0,
-            step: 0,
+            step: 1,
             template: String::from("{}"),
         }
     }
@@ -76,10 +76,10 @@ impl Counter {
     pub fn update(&self, conn: &ConnectionThreadSafe) -> sqlite::Result<()> {
         let mut stmt =
             conn.prepare("UPDATE counters SET count = ?, step = ?, template = ? WHERE name = ?")?;
-        stmt.bind((1, self.name.as_str()))?;
-        stmt.bind((2, self.count))?;
-        stmt.bind((3, self.step))?;
-        stmt.bind((4, self.template.as_str()))?;
+        stmt.bind((1, self.count))?;
+        stmt.bind((2, self.step))?;
+        stmt.bind((3, self.template.as_str()))?;
+        stmt.bind((4, self.name.as_str()))?;
         stmt.next()?;
         Ok(())
     }
@@ -93,7 +93,7 @@ impl Counter {
     //     is_default: bool,
     // ) -> Result<()> {
     //     let mut stmt = self.conn.prepare(
-    //         "INSERT INTO counters (name, count, step, template, is_default) 
+    //         "INSERT INTO counters (name, count, step, template, is_default)
     //         VALUES (?, ?, ?, ?, ?)",
     //     )?;
     //
@@ -162,7 +162,7 @@ impl Counter {
     //     }
     //
     //     let mut stmt = self.conn.prepare(
-    //         "INSERT INTO counters (name, count, step, template, is_default) 
+    //         "INSERT INTO counters (name, count, step, template, is_default)
     //          VALUES (?, ?, ?, ?, ?)",
     //     )?;
     //     stmt.bind((1, name))?;

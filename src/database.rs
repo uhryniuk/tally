@@ -1,6 +1,6 @@
-use anyhow::Result;
-use sqlite::{ConnectionThreadSafe};
 use crate::models::Counter;
+use anyhow::Result;
+use sqlite::ConnectionThreadSafe;
 
 pub struct Connection {
     conn: ConnectionThreadSafe,
@@ -51,9 +51,7 @@ impl Connection {
 
         Ok(())
     }
-
 }
-
 
 /// Transaction handler to ensure all transactions are either
 /// completed or rolled back
@@ -63,7 +61,6 @@ pub struct Tx<'a> {
 }
 
 impl<'a> Tx<'a> {
-
     /// Create a new transation on the prodvided SQLite connection
     pub fn new(conn: &'a ConnectionThreadSafe) -> Result<Self> {
         conn.execute("BEGIN TRANSACTION")?;
