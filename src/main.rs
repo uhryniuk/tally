@@ -211,7 +211,13 @@ fn main() -> Result<()> {
             let default = Counter::get_default(conn.get())?.unwrap();
             for row in rows.iter() {
                 let is_default = if default == row.name { "*" } else { "" };
-                table.add_row(row![row.name, row.count, row.step, row.template, is_default]);
+                table.add_row(row![
+                    row.name,
+                    row.count,
+                    row.step,
+                    row.template,
+                    is_default
+                ]);
             }
             table.printstd();
         }
