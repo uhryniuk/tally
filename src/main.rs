@@ -120,10 +120,9 @@ fn main() -> Result<()> {
     // parse top level args
     // let default_name = conn.get_default_counter()?;
     // TODO impl the new default table
-    let default_name = "tally";
     let name = match matches.get_one::<String>("name") {
         Some(n) => n,
-        None => default_name,
+        None => &Counter::get_default(conn.get())?.unwrap(),
     };
 
     let mut counter = match Counter::get(conn.get(), name)? {
@@ -137,14 +136,6 @@ fn main() -> Result<()> {
 
     let is_quiet = matches.get_one::<bool>("quiet").cloned().unwrap();
     let is_raw = matches.get_flag("raw");
-    let print_count = |count| -> Result<()> {
-        if is_raw {
-            println!("{}", count);
-        } else {
-            println!("{}", template::render(&conn, &counter.name)?);
-        }
-        Ok(())
-    };
 
     // divert logic to subcommand
     match matches.subcommand() {
@@ -160,6 +151,9 @@ fn main() -> Result<()> {
             if let Some(template) = sub_mat.get_one::<String>("template").cloned() {
                 counter.template = template
             }
+            if let Some(_) = sub_mat.get_one::<bool>("default").cloned() {
+                counter.set_default(conn.get())?;
+            }
         }
         Some(("add", sub_mat)) => {
             let amount = match sub_mat.get_one::<String>("amount") {
@@ -168,9 +162,14 @@ fn main() -> Result<()> {
             };
 
             counter.count += amount;
+            counter.update(conn.get())?;
 
             if !is_quiet {
-                print_count(counter.count)?;
+                if is_raw {
+                    println!("{}", counter.count);
+                } else {
+                    println!("{}", template::render(&conn, &counter.name)?);
+                }
             }
         }
         Some(("sub", sub_mat)) => {
@@ -180,9 +179,14 @@ fn main() -> Result<()> {
             };
 
             counter.count -= amount;
+            counter.update(conn.get())?;
 
             if !is_quiet {
-                print_count(counter.count)?;
+                if is_raw {
+                    println!("{}", counter.count);
+                } else {
+                    println!("{}", template::render(&conn, &counter.name)?);
+                }
             }
         }
         Some(("delete", _sub_mat)) => Counter::delete(conn.get(), &counter.name)?,
@@ -204,8 +208,10 @@ fn main() -> Result<()> {
 
             // Add rows of data to table
             let rows = Counter::get_all(conn.get())?;
+            let default = Counter::get_default(conn.get())?.unwrap();
             for row in rows.iter() {
-                table.add_row(row![row.name, row.count, row.step, row.template]);
+                let is_default = if default == row.name { "*" } else { "" };
+                table.add_row(row![row.name, row.count, row.step, row.template, is_default]);
             }
             table.printstd();
         }
@@ -225,7 +231,11 @@ fn main() -> Result<()> {
         }
         None => {
             if !is_quiet {
-                print_count(counter.count)?;
+                if is_raw {
+                    println!("{}", counter.count);
+                } else {
+                    println!("{}", template::render(&conn, &counter.name)?);
+                }
             }
         }
         _ => {

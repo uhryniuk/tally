@@ -18,8 +18,23 @@ impl Counter {
         }
     }
 
-    pub fn set_default(&self, conn: &mut ConnectionThreadSafe) {}
-    pub fn get_default(conn: &mut ConnectionThreadSafe) {}
+    pub fn set_default(&self, conn: &ConnectionThreadSafe) -> sqlite::Result<()>{
+
+        let mut stmt = conn.prepare("INSERT INTO default_counter (name, timestamp) VALUES (?, CURRENT_TIMESTAMP);")?;
+        stmt.bind((1, self.name.as_str()))?;
+        stmt.next()?;
+        Ok(())
+    }
+
+    pub fn get_default(conn: &ConnectionThreadSafe) -> sqlite::Result<Option<String>> {
+        let mut stmt =
+            conn.prepare("SELECT name FROM default_counter ORDER BY timestamp DESC LIMIT 1;")?;
+        if let State::Row = stmt.next()? {
+            Ok(Some(String::from(stmt.read::<String, usize>(0)?.to_string())))
+        } else {
+            Ok(None)
+        }
+    }
 
     pub fn insert(&self, conn: &ConnectionThreadSafe) -> sqlite::Result<()> {
         let mut stmt =
