@@ -1,5 +1,3 @@
-use std::default;
-
 use crate::models::Counter;
 use anyhow::Result;
 use sqlite::ConnectionThreadSafe;
@@ -11,10 +9,6 @@ pub struct Connection {
 impl Connection {
     pub fn get(&self) -> &ConnectionThreadSafe {
         &self.conn
-    }
-
-    pub fn get_mut(&mut self) -> &mut ConnectionThreadSafe {
-        &mut self.conn
     }
 
     pub fn new(name: &str) -> Result<Connection> {
@@ -64,39 +58,5 @@ impl Connection {
         }
 
         Ok(())
-    }
-}
-
-/// Transaction handler to ensure all transactions are either
-/// completed or rolled back
-pub struct Tx<'a> {
-    conn: &'a ConnectionThreadSafe,
-    committed: bool,
-}
-
-impl<'a> Tx<'a> {
-    /// Create a new transation on the prodvided SQLite connection
-    pub fn new(conn: &'a ConnectionThreadSafe) -> Result<Self> {
-        conn.execute("BEGIN TRANSACTION")?;
-        Ok(Self {
-            conn,
-            committed: false,
-        })
-    }
-
-    /// Commit the transation on the prodvided SQLite connection
-    pub fn commit(mut self) -> Result<()> {
-        self.conn.execute("COMMIT")?;
-        self.committed = true;
-        Ok(())
-    }
-}
-
-impl<'a> Drop for Tx<'a> {
-    /// Rollback changes if the transaction is failed to be commited
-    fn drop(&mut self) {
-        if !self.committed {
-            let _ = self.conn.execute("ROLLBACK");
-        }
     }
 }

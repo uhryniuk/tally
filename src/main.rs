@@ -151,7 +151,7 @@ fn main() -> Result<()> {
             if let Some(template) = sub_mat.get_one::<String>("template").cloned() {
                 counter.template = template
             }
-            if let Some(_) = sub_mat.get_one::<bool>("default").cloned() {
+            if sub_mat.get_one::<bool>("default").cloned().is_some() {
                 counter.set_default(conn.get())?;
             }
         }

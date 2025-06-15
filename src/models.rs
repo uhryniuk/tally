@@ -1,4 +1,4 @@
-use sqlite::{ConnectionThreadSafe, State, Value};
+use sqlite::{ConnectionThreadSafe, State};
 
 #[derive(Debug)]
 pub struct Counter {
@@ -31,9 +31,7 @@ impl Counter {
         let mut stmt =
             conn.prepare("SELECT name FROM default_counter ORDER BY timestamp DESC LIMIT 1;")?;
         if let State::Row = stmt.next()? {
-            Ok(Some(String::from(
-                stmt.read::<String, usize>(0)?.to_string(),
-            )))
+            Ok(Some(stmt.read::<String, usize>(0)?))
         } else {
             Ok(None)
         }
