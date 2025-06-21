@@ -1,9 +1,12 @@
 use crate::models::Counter;
 use anyhow::Result;
+use fs2::FileExt;
 use sqlite::ConnectionThreadSafe;
+use std::fs::File;
 
 pub struct Connection {
     conn: ConnectionThreadSafe,
+    lock_file: File,
 }
 
 impl Connection {
@@ -12,12 +15,21 @@ impl Connection {
     }
 
     pub fn new(name: &str) -> Result<Connection> {
-        // Create process and thread safe connection
+        // Acquire file lock
+        let lock_path = format!("{}.lock", name);
+        let lock_file = File::create(&lock_path)?;
+
+        // Block the process until the lock is acquired
+        lock_file.lock_exclusive()?;
+
         let mut connection = sqlite::Connection::open_thread_safe(name).expect("ORPS");
         connection.set_busy_timeout(5_000_000)?;
         connection.execute("PRAGMA journal_mode = WAL;")?;
 
-        let mut conn = Connection { conn: connection };
+        let mut conn = Connection {
+            conn: connection,
+            lock_file,
+        };
         conn.init_database()?;
         Ok(conn)
     }
@@ -58,5 +70,13 @@ impl Connection {
         }
 
         Ok(())
+    }
+}
+
+impl Drop for Connection {
+    fn drop(&mut self) {
+        if let Err(e) = fs2::FileExt::unlock(&self.lock_file) {
+            eprintln!("Warning: Failed to unlock file: {}", e);
+        }
     }
 }
