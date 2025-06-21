@@ -9,6 +9,7 @@ use models::Counter;
 use prettytable::{row, Table};
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::exit;
 
 const DATABASE_FILE: &str = "tally.db";
 const DATA_DIR: &str = ".tally";
@@ -140,12 +141,30 @@ fn main() -> Result<()> {
     // divert logic to subcommand
     match matches.subcommand() {
         Some(("set", sub_mat)) => {
-            if let Some(count) = sub_mat.get_one::<i64>("count").cloned() {
-                counter.count = count;
+            if let Some(count) = sub_mat.get_one::<String>("count").cloned() {
+                match count.parse::<i64>() {
+                    Ok(count) => counter.count = count,
+                    Err(e) => {
+                        eprintln!(
+                            "failed to set 'count' for counter '{}' because: {}",
+                            counter.name, e
+                        );
+                        exit(1);
+                    }
+                }
             }
 
-            if let Some(step) = sub_mat.get_one::<i64>("step").cloned() {
-                counter.step = step;
+            if let Some(step) = sub_mat.get_one::<String>("step").cloned() {
+                match step.parse::<i64>() {
+                    Ok(step) => counter.step = step,
+                    Err(e) => {
+                        eprintln!(
+                            "failed to set 'step' for counter '{}' because: {}",
+                            counter.name, e
+                        );
+                        exit(1);
+                    }
+                }
             }
 
             if let Some(template) = sub_mat.get_one::<String>("template").cloned() {
