@@ -213,9 +213,7 @@ fn main() -> Result<()> {
             // Create and format table
             let mut table = Table::new();
             let format = prettytable::format::FormatBuilder::new()
-                .column_separator(' ')
-                .borders(' ')
-                .padding(0, 1)
+                .padding(0, 2)
                 .build();
             table.set_format(format);
             table.add_row(row!["Name", "Count", "Step", "Template", "Default"]);
