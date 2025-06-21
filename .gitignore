@@ -5,9 +5,6 @@
 /.rustup/
 /.rustup/
 
-# Ignore Cargo.lock (in projects that use libraries)
-/Cargo.lock
-
 # Ignore compiled binary (if you're using a build script)
 *.rs.bk
 
