@@ -9,8 +9,6 @@ Written in Rust with SQLite, it's a process-safe way to keep count across your s
 
 ## Installation
 
-Shown above, you can easily install `tally` if you already have Rust and cargo installed on your machine.
-
 ### Cargo
 
 Tally is published to [crate.io](https://crates.io/) and is easily installed with the following command.
@@ -96,7 +94,7 @@ tally        6      1     {}
 new-counter  10     5     {}        *
 ```
 
-Templating and referncing counters between them is supported too.
+Templating and referencing counters between each other is supported.
 
 ```bash
 
@@ -114,7 +112,7 @@ tally        6      1     {}
 new-counter  11     5     new-counter: {}, tally: {tally}  *
 ```
 
-Need to clean up the counters? Simple run the `nuke` subcommand
+Need to clean up the counters? Simple run the `nuke` subcommand.
 
 ```bash
 
