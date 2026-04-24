@@ -22,7 +22,7 @@ impl Connection {
         // Block the process until the lock is acquired
         lock_file.lock_exclusive()?;
 
-        let mut connection = sqlite::Connection::open_thread_safe(name).expect("ORPS");
+        let mut connection = sqlite::Connection::open_thread_safe(name)?;
         connection.set_busy_timeout(5_000)?;
         connection.execute("PRAGMA journal_mode = WAL;")?;
 
