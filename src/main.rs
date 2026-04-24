@@ -98,7 +98,16 @@ fn main() -> Result<()> {
                         .help("List counters without column headers"),
                 ),
         )
-        .subcommand(Command::new("nuke").about("Nuke the counter database"));
+        .subcommand(
+            Command::new("nuke").about("Nuke the counter database").arg(
+                Arg::new("yes")
+                    .long("yes")
+                    .short('y')
+                    .required(false)
+                    .action(clap::ArgAction::SetTrue)
+                    .help("Skip the confirmation prompt"),
+            ),
+        );
 
     let matches = app.get_matches();
 
@@ -230,16 +239,22 @@ fn main() -> Result<()> {
             }
             table.printstd();
         }
-        Some(("nuke", _sub_mat)) => {
-            print!("Are you sure wish to nuke? (y/n): ");
-            std::io::stdout().flush().unwrap();
+        Some(("nuke", sub_mat)) => {
+            let confirmed = if sub_mat.get_flag("yes") {
+                true
+            } else {
+                print!("Are you sure wish to nuke? (y/n): ");
+                std::io::stdout().flush().unwrap();
 
-            let mut input = String::new();
-            std::io::stdin()
-                .read_line(&mut input)
-                .expect("Failed to read line");
+                let mut input = String::new();
+                std::io::stdin()
+                    .read_line(&mut input)
+                    .expect("Failed to read line");
 
-            if input.to_lowercase().trim() == "y" {
+                input.to_lowercase().trim() == "y"
+            };
+
+            if confirmed {
                 std::fs::remove_file(database_path)?;
                 println!("Database deleted successfully.");
             }
