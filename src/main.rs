@@ -217,8 +217,7 @@ fn main() -> Result<()> {
             table.set_format(format);
             table.add_row(row!["Name", "Count", "Step", "Template", "Default"]);
 
-            let has_headers = sub_mat.get_one::<bool>("no-headers").cloned().unwrap();
-            if has_headers {
+            if sub_mat.get_flag("no-headers") {
                 table.remove_row(0);
             }
 
