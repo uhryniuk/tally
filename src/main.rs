@@ -249,8 +249,8 @@ fn main() -> Result<()> {
                 .expect("Failed to read line");
 
             if input.to_lowercase().trim() == "y" {
-                println!("Database deleted successfully.");
                 std::fs::remove_file(database_path)?;
+                println!("Database deleted successfully.");
             }
         }
         None => {
