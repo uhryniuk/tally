@@ -101,3 +101,110 @@ impl Counter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::database::Connection;
+    use tempfile::TempDir;
+
+    fn fresh_db() -> (TempDir, Connection) {
+        let dir = TempDir::new().unwrap();
+        let path = dir.path().join("test.db");
+        let conn = Connection::new(&path.to_string_lossy()).unwrap();
+        (dir, conn)
+    }
+
+    #[test]
+    fn new_has_sensible_defaults() {
+        let c = Counter::new("foo");
+        assert_eq!(c.name, "foo");
+        assert_eq!(c.count, 0);
+        assert_eq!(c.step, 1);
+        assert_eq!(c.template, "{}");
+    }
+
+    #[test]
+    fn insert_and_get_round_trip() {
+        let (_dir, conn) = fresh_db();
+        let c = Counter {
+            name: "foo".into(),
+            count: 7,
+            step: 2,
+            template: "x-{}".into(),
+        };
+        c.insert(conn.get()).unwrap();
+
+        let loaded = Counter::get(conn.get(), "foo").unwrap().unwrap();
+        assert_eq!(loaded.name, "foo");
+        assert_eq!(loaded.count, 7);
+        assert_eq!(loaded.step, 2);
+        assert_eq!(loaded.template, "x-{}");
+    }
+
+    #[test]
+    fn get_missing_returns_none() {
+        let (_dir, conn) = fresh_db();
+        assert!(Counter::get(conn.get(), "nope").unwrap().is_none());
+    }
+
+    #[test]
+    fn update_persists_changes() {
+        let (_dir, conn) = fresh_db();
+        let mut c = Counter::new("foo");
+        c.insert(conn.get()).unwrap();
+        c.count = 42;
+        c.step = 5;
+        c.update(conn.get()).unwrap();
+
+        let loaded = Counter::get(conn.get(), "foo").unwrap().unwrap();
+        assert_eq!(loaded.count, 42);
+        assert_eq!(loaded.step, 5);
+    }
+
+    #[test]
+    fn delete_removes_row() {
+        let (_dir, conn) = fresh_db();
+        Counter::new("foo").insert(conn.get()).unwrap();
+        Counter::delete(conn.get(), "foo").unwrap();
+        assert!(Counter::get(conn.get(), "foo").unwrap().is_none());
+    }
+
+    #[test]
+    fn get_all_returns_every_counter() {
+        let (_dir, conn) = fresh_db();
+        Counter::new("a").insert(conn.get()).unwrap();
+        Counter::new("b").insert(conn.get()).unwrap();
+        let mut names: Vec<String> = Counter::get_all(conn.get())
+            .unwrap()
+            .into_iter()
+            .map(|c| c.name)
+            .collect();
+        names.sort();
+        assert_eq!(names, vec!["a", "b", "tally"]);
+    }
+
+    #[test]
+    fn set_default_keeps_default_counter_single_row() {
+        let (_dir, conn) = fresh_db();
+        Counter::new("a").insert(conn.get()).unwrap();
+        Counter::new("b").insert(conn.get()).unwrap();
+
+        Counter::new("a").set_default(conn.get()).unwrap();
+        Counter::new("b").set_default(conn.get()).unwrap();
+        Counter::new("a").set_default(conn.get()).unwrap();
+
+        assert_eq!(
+            Counter::get_default(conn.get()).unwrap().as_deref(),
+            Some("a")
+        );
+
+        let mut stmt = conn
+            .get()
+            .prepare("SELECT COUNT(*) FROM default_counter;")
+            .unwrap();
+        stmt.next().unwrap();
+        let count: i64 = stmt.read(0).unwrap();
+        assert_eq!(count, 1);
+    }
+}
