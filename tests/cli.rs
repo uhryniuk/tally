@@ -22,11 +22,7 @@ fn version_flag_prints_package_version() {
 fn add_persists_and_reads_back() {
     let home = TempDir::new().unwrap();
     tally(&home).args(["foo", "add", "5"]).assert().success();
-    tally(&home)
-        .args(["foo"])
-        .assert()
-        .success()
-        .stdout("5\n");
+    tally(&home).args(["foo"]).assert().success().stdout("5\n");
 }
 
 #[test]
@@ -34,11 +30,7 @@ fn sub_decrements_counter() {
     let home = TempDir::new().unwrap();
     tally(&home).args(["foo", "add", "10"]).assert().success();
     tally(&home).args(["foo", "sub", "3"]).assert().success();
-    tally(&home)
-        .args(["foo"])
-        .assert()
-        .success()
-        .stdout("7\n");
+    tally(&home).args(["foo"]).assert().success().stdout("7\n");
 }
 
 #[test]
@@ -50,11 +42,7 @@ fn add_without_amount_uses_step() {
         .success();
     tally(&home).args(["foo", "add"]).assert().success();
     tally(&home).args(["foo", "add"]).assert().success();
-    tally(&home)
-        .args(["foo"])
-        .assert()
-        .success()
-        .stdout("8\n");
+    tally(&home).args(["foo"]).assert().success().stdout("8\n");
 }
 
 #[test]
@@ -185,10 +173,7 @@ fn quiet_suppresses_stdout() {
 #[test]
 fn template_renders_nested_reference() {
     let home = TempDir::new().unwrap();
-    tally(&home)
-        .args(["inner", "set", "5"])
-        .assert()
-        .success();
+    tally(&home).args(["inner", "set", "5"]).assert().success();
     tally(&home)
         .args(["outer", "set", "--template", "[{inner}]"])
         .assert()

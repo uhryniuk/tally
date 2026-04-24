@@ -2,11 +2,11 @@ use anyhow::{anyhow, Result};
 use clap::{Arg, Command};
 use dirs::home_dir;
 use prettytable::{row, Table};
-use tally_cli::models::Counter;
-use tally_cli::{database, template};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
+use tally_cli::models::Counter;
+use tally_cli::{database, template};
 
 const DATABASE_FILE: &str = "tally.db";
 const DATA_DIR: &str = ".tally";

@@ -12,11 +12,7 @@ pub fn render(conn: &Connection, name: &str) -> Result<String> {
     render_inner(conn, name, &mut visited)
 }
 
-fn render_inner(
-    conn: &Connection,
-    name: &str,
-    visited: &mut HashSet<String>,
-) -> Result<String> {
+fn render_inner(conn: &Connection, name: &str, visited: &mut HashSet<String>) -> Result<String> {
     if !visited.insert(name.to_string()) {
         return Err(anyhow!(
             "template cycle detected involving counter '{}'",
