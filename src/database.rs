@@ -23,7 +23,7 @@ impl Connection {
         lock_file.lock_exclusive()?;
 
         let mut connection = sqlite::Connection::open_thread_safe(name).expect("ORPS");
-        connection.set_busy_timeout(5_000_000)?;
+        connection.set_busy_timeout(5_000)?;
         connection.execute("PRAGMA journal_mode = WAL;")?;
 
         let mut conn = Connection {
