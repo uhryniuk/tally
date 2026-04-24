@@ -85,14 +85,7 @@ fn main() -> Result<()> {
                     .help("Amount to decrement the counter by"),
             ),
         )
-        .subcommand(
-            Command::new("delete").about("Delete a given counter").arg(
-                Arg::new("counter")
-                    .required(false)
-                    .index(1)
-                    .help("Counter to delete"),
-            ),
-        )
+        .subcommand(Command::new("delete").about("Delete a given counter"))
         .subcommand(
             Command::new("list")
                 .about("List all of the active counters")
