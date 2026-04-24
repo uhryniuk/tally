@@ -1,12 +1,9 @@
-mod database;
-mod models;
-mod template;
-
 use anyhow::{anyhow, Result};
 use clap::{Arg, Command};
 use dirs::home_dir;
-use models::Counter;
 use prettytable::{row, Table};
+use tally_cli::models::Counter;
+use tally_cli::{database, template};
 use std::io::Write;
 use std::path::PathBuf;
 use std::process::exit;
