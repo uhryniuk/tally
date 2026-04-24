@@ -19,6 +19,7 @@ impl Counter {
     }
 
     pub fn set_default(&self, conn: &ConnectionThreadSafe) -> sqlite::Result<()> {
+        conn.execute("DELETE FROM default_counter;")?;
         let mut stmt = conn.prepare(
             "INSERT INTO default_counter (name, timestamp) VALUES (?, CURRENT_TIMESTAMP);",
         )?;
