@@ -75,5 +75,6 @@ jobs:
             --workspace \
             --all-features \
             --allow-branch main \
+            --allow-branch HEAD \
             --no-confirm \
             --execute
