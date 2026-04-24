@@ -118,9 +118,6 @@ fn main() -> Result<()> {
     let conn = database::Connection::new(&database_path.clone().to_string_lossy())
         .expect("Cannot connect to database.");
 
-    // parse top level args
-    // let default_name = conn.get_default_counter()?;
-    // TODO impl the new default table
     let name = match matches.get_one::<String>("name") {
         Some(n) => n,
         None => &Counter::get_default(conn.get())?.unwrap(),
