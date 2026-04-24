@@ -2,6 +2,9 @@ use crate::database::Connection;
 use crate::models::Counter;
 use anyhow::{anyhow, Result};
 use regex::Regex;
+use std::sync::LazyLock;
+
+static TEMPLATE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{(.*?)\}").unwrap());
 
 pub fn render(conn: &Connection, name: &str) -> Result<String> {
     // parse template, finding replace
@@ -12,11 +15,8 @@ pub fn render(conn: &Connection, name: &str) -> Result<String> {
 
     let mut rendered = counter.template.replace("{}", &counter.count.to_string());
 
-    // Create the regex pattern to match anything inside {}
-    let re = Regex::new(r"\{(.*?)\}").unwrap();
-
     // Find all matches
-    for cap in re.captures_iter(&rendered.clone()) {
+    for cap in TEMPLATE_RE.captures_iter(&rendered.clone()) {
         // replace {value} with {}
         rendered = rendered.replace(&cap[0], "{}");
         // get recursive template
