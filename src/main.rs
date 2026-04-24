@@ -173,6 +173,7 @@ fn main() -> Result<()> {
             if sub_mat.get_flag("default") {
                 counter.set_default(conn.get())?;
             }
+            counter.update(conn.get())?;
         }
         Some(("add", sub_mat)) => {
             let amount = match sub_mat.get_one::<String>("amount") {
@@ -266,8 +267,6 @@ fn main() -> Result<()> {
             std::process::exit(1);
         }
     }
-
-    counter.update(conn.get())?;
 
     Ok(())
 }
