@@ -2,7 +2,7 @@ mod database;
 mod models;
 mod template;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Arg, Command};
 use dirs::home_dir;
 use models::Counter;
@@ -118,15 +118,16 @@ fn main() -> Result<()> {
     let conn = database::Connection::new(&database_path.clone().to_string_lossy())
         .expect("Cannot connect to database.");
 
-    let name = match matches.get_one::<String>("name") {
-        Some(n) => n,
-        None => &Counter::get_default(conn.get())?.unwrap(),
+    let name: String = match matches.get_one::<String>("name") {
+        Some(n) => n.clone(),
+        None => Counter::get_default(conn.get())?
+            .ok_or_else(|| anyhow!("no default counter set; run 'tally <name> set --default'"))?,
     };
 
-    let mut counter = match Counter::get(conn.get(), name)? {
+    let mut counter = match Counter::get(conn.get(), &name)? {
         Some(c) => c,
         None => {
-            let c = Counter::new(name);
+            let c = Counter::new(&name);
             c.insert(conn.get())?;
             c
         }
