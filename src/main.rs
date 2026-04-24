@@ -16,6 +16,7 @@ const DATA_DIR: &str = ".tally";
 
 fn main() -> Result<()> {
     let app = Command::new("tally")
+        .version(env!("CARGO_PKG_VERSION"))
         .about("A global counter")
         .arg(
             Arg::new("name")
