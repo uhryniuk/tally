@@ -19,8 +19,10 @@ impl Connection {
         let lock_path = format!("{}.lock", name);
         let lock_file = File::create(&lock_path)?;
 
-        // Block the process until the lock is acquired
-        lock_file.lock_exclusive()?;
+        if lock_file.try_lock_exclusive().is_err() {
+            eprintln!("tally: waiting for another instance to release {lock_path}");
+            lock_file.lock_exclusive()?;
+        }
 
         let mut connection = sqlite::Connection::open_thread_safe(name)?;
         connection.set_busy_timeout(5_000)?;
